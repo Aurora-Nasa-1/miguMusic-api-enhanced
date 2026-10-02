@@ -3,6 +3,9 @@ dist/
 dist-server/
 dist-bun/
 
+# cpplayer 模块 zip 产物（cpplayer/pack.mjs 生成，随 GitHub Release 分发）
+cpplayer/*.zip
+
 # dev
 .yarn/
 !.yarn/releases

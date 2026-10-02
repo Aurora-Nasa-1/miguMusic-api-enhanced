@@ -15,11 +15,48 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  verify:
+    # 版本一致性的守门人：tag 说是 v1.2.3，package.json / manifest.json 就必须是 1.2.3。
+    # 放在 build 之前，漂移时**不会**产出任何"看起来成功"的产物。
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # 必须拿全 tag，否则 `git describe --exact-match` 找不到 tag
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Verify versions match the tag
+        # push tag：版本由 HEAD 的 tag 决定（脚本自己读）。
+        # workflow_dispatch：HEAD 未必带 tag，把输入的 tag 当权威值传进去比对。
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if ! echo "$INPUT_TAG" | grep -qE '^v?[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+              echo "::error::输入的 tag 不合法: $INPUT_TAG（期望 v1.2.3）"
+              exit 1
+            fi
+            export MIGU_VERSION="${INPUT_TAG#v}"
+            export CPPLAYER_MODULE_VERSION="$MIGU_VERSION"
+            echo "使用手动指定的版本 $MIGU_VERSION"
+          fi
+          node scripts/version.mjs --check
+          node cpplayer/scripts/version.mjs --check
+
+  build:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -42,6 +79,13 @@ jobs:
           else
             echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           fi
+
+      - name: Build CPPlayer module zip
+        # 显式传版本：workflow_dispatch 时 HEAD 不一定带 tag，靠环境变量锁定版本，
+        # 避免"打出来的 zip 自称一个和 tag 不同的版本"。
+        env:
+          CPPLAYER_MODULE_VERSION: ${{ steps.get_version.outputs.VERSION }}
+        run: node cpplayer/pack.mjs --out dist-bun/migu-cpplayer-module.zip
 
       - name: Build Linux x64
         run: |
@@ -77,7 +121,6 @@ jobs:
             dist-bun/*.tar.gz
             dist-bun/*.zip
             dist-bun/migu-api-server-node.js
-
   release:
     needs: build
     runs-on: ubuntu-latest
@@ -108,13 +151,17 @@ jobs:
           name: Release ${{ steps.get_version.outputs.VERSION }}
           body: |
             ## Migu API Enhanced - Bun Executables
-            
-            ### 发布文件
-            
+
+            ### 服务端
+
             - Linux x64: `migu-api-server-linux-x64.tar.gz`
             - Linux ARM64: `migu-api-server-linux-arm64.tar.gz`
             - Windows x64: `migu-api-server-windows-x64.zip`
             - Node.js: `migu-api-server-node.js`
+
+            ### CPPlayer 音源模块
+
+            - `migu-cpplayer-module.zip`：导入 CPPlayer（设置 → 音源管理 → 导入模块）即可用
           files: |
             dist-bun/*.tar.gz
             dist-bun/*.zip

@@ -38,6 +38,13 @@
 
 欢迎大家提交 Pull Request，或在 GitHub 上打开 Issue。或者适量点点 Star，支持一下！🤗
 
+## 作为 CPPlayer 音源
+
+本仓库同时提供 [CPPlayer-KMP](https://github.com/) 的音源模块包，见
+[`cpplayer/`](cpplayer/README.md)：CPPlayer 标准接口适配层在 `src/cpplayer/`，
+桌面端发 **binary 型**模块（bun 单文件，导入即用），Android 等其他平台发
+**http 型**模块（zip 仅 manifest，指向本服务的部署实例）。
+
 ## 快速开始
 
 ### 安装依赖

@@ -6,6 +6,7 @@ import { env, getRuntimeKey } from 'hono/adapter';
 import { etag, RETAINED_304_HEADERS } from 'hono/etag';
 import { methodNotAllowed } from 'hono/method-not-allowed';
 import apiRoutes from './routers/index';
+import cpplayerRoutes from './cpplayer/routes';
 
 // 通过 import 引入 package.json，esbuild / tsup 在构建时会将 JSON 内联到产物中
 // 这样在 Node、Cloudflare Workers、Vercel Edge、Deno、EdgeOne 等所有 bundler 平台都能直接读取版本号
@@ -112,6 +113,11 @@ app.get('/migu/status', c => {
 
 // API 路由
 app.route('/migu', apiRoutes);
+
+// CPPlayer 标准接口（咪咕音源）。
+// CPPlayer 的 http 模块把 manifest.entryPoint 指到本服务的 /cpplayer 前缀，
+// 即对 POST {entryPoint}/{method} 发标准请求；方法见 src/cpplayer/migu.ts。
+app.route('/cpplayer', cpplayerRoutes);
 
 // 404 处理
 app.notFound(c => {
