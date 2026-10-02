@@ -80,12 +80,16 @@ jobs:
             echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build CPPlayer module zip
+      - name: Build CPPlayer module zips
         # 显式传版本：workflow_dispatch 时 HEAD 不一定带 tag，靠环境变量锁定版本，
         # 避免"打出来的 zip 自称一个和 tag 不同的版本"。
+        # 双形态：http 型（Android 等，仅 manifest）+ binary 型（桌面 Win x64 单文件）。
         env:
           CPPLAYER_MODULE_VERSION: ${{ steps.get_version.outputs.VERSION }}
-        run: node cpplayer/pack.mjs --out dist-bun/migu-cpplayer-module.zip
+        run: |
+          node cpplayer/pack.mjs --out dist-bun/migu-cpplayer-http.zip
+          bun build src/adapters/cpplayer-binary.ts --compile --minify --target=bun-windows-x64 --outfile dist-bun/cpplayer-server.exe
+          node cpplayer/pack.mjs --mode binary --out dist-bun/migu-cpplayer-binary-win.zip
 
       - name: Build Linux x64
         run: |

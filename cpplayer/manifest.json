@@ -1,7 +1,7 @@
 {
     "id": "migu",
     "name": "咪咕音乐",
-    "version": "1.2.7",
+    "version": "2.27.7",
     "type": "http",
     "entryPoint": "http://127.0.0.1:6200/cpplayer",
     "targetAppPackage": "cmccwm.mobilemusic",
